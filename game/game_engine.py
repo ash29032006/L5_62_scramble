@@ -1,4 +1,4 @@
-import random
+import secrets
 import pygame
 from game.text_box import TextBox
 
@@ -9,7 +9,7 @@ class GameEngine:
         self.height = height
 
         self.words = ["PYTHON", "PYGAME", "PLANET", "ROCKET", "GALAXY", "STREAM", "PUZZLE", "ALGORITHM"]
-        self.secret_word = ""
+        self.target_word = ""
         self.scrambled_word = ""
 
         self.score = 0
@@ -52,10 +52,19 @@ class GameEngine:
 
         self.next_round()
 
+    @property
+    def secret_word(self):
+        return self.target_word
+
+    @secret_word.setter
+    def secret_word(self, value):
+        self.target_word = value
+
     def scramble_string(self, word):
         letters = list(word)
+        sys_rand = secrets.SystemRandom()
         while True:
-            random.shuffle(letters)
+            sys_rand.shuffle(letters)
             shuffled = "".join(letters)
             if shuffled != word or len(word) <= 1:
                 return shuffled
@@ -67,8 +76,8 @@ class GameEngine:
         return pygame.Rect(tile_x, self.tile_rack_y, self.tile_size, self.tile_size)
 
     def next_round(self):
-        self.secret_word = random.choice(self.words)
-        self.scrambled_word = self.scramble_string(self.secret_word)
+        self.target_word = secrets.choice(self.words)
+        self.scrambled_word = self.scramble_string(self.target_word)
         self.input_box.clear()
 
         # Reset hints
