@@ -1,10 +1,20 @@
+"""Game engine module for Word Scramble Arena.
+
+Manages anagram mechanics, interactive draggable tiles, hint reveals, round
+countdown timers, and score validation.
+"""
+
+# pylint: disable=no-member,too-many-instance-attributes
 import secrets
 import pygame
 from game.text_box import TextBox
 
 
 class GameEngine:
+    """Core game controller managing state, user input, and rendering."""
+
     def __init__(self, width, height):
+        """Initialize game window dimensions, UI widgets, and word pool."""
         self.width = width
         self.height = height
 
@@ -57,13 +67,16 @@ class GameEngine:
 
     @property
     def secret_word(self):
+        """Retrieve target word solution."""
         return self.target_word
 
     @secret_word.setter
     def secret_word(self, value):
+        """Assign target word solution."""
         self.target_word = value
 
     def scramble_string(self, word):
+        """Randomize letter order ensuring result differs from input."""
         letters = list(word)
         sys_rand = secrets.SystemRandom()
         while True:
@@ -73,6 +86,7 @@ class GameEngine:
                 return shuffled
 
     def get_tile_rect(self, index, total_tiles):
+        """Compute bounding rectangle for tile slot at given rack index."""
         total_w = (
             total_tiles * self.tile_size + (total_tiles - 1) * self.tile_gap
         )
@@ -83,25 +97,23 @@ class GameEngine:
         )
 
     def next_round(self):
+        """Advance game state to a new word round and reset round timers."""
         self.target_word = secrets.choice(self.words)
         self.scrambled_word = self.scramble_string(self.target_word)
         self.input_box.clear()
 
-        # Reset hints
         self.revealed_hints = 0
-
-        # Reset timer
         self.round_start_ticks = pygame.time.get_ticks()
         self.time_left = self.round_duration
         self.times_up = False
         self.times_up_timer = 0
 
-        # Reset tile letters for Task 4
         self.tile_letters = list(self.scrambled_word)
         self.selected_tile_idx = None
         self.dragging_tile_idx = None
 
     def trigger_hint(self):
+        """Reveal next unrevealed letter with score deduction penalty."""
         if self.times_up:
             return
 
@@ -115,6 +127,7 @@ class GameEngine:
             self.feedback_color = (240, 170, 50)
 
     def submit_guess(self):
+        """Validate player input against target word and update score."""
         if self.times_up:
             return
 
@@ -125,7 +138,7 @@ class GameEngine:
             return
 
         # Task 1: Fix guess comparison validation bug
-        is_correct = (guess == self.secret_word)
+        is_correct = guess == self.secret_word
 
         if is_correct:
             self.score += 1
@@ -137,91 +150,90 @@ class GameEngine:
             self.feedback_color = (240, 80, 80)
             self.input_box.clear()
 
+    def _handle_mouse_down(self, pos):
+        """Handle mouse click interactions for buttons and tile rack."""
+        if self.submit_btn.collidepoint(pos):
+            self.submit_guess()
+            return
+
+        if self.hint_btn.collidepoint(pos):
+            self.trigger_hint()
+            return
+
+        if self.times_up:
+            return
+
+        total_tiles = len(self.tile_letters)
+        clicked_tile = None
+        for i in range(total_tiles):
+            rect = self.get_tile_rect(i, total_tiles)
+            if rect.collidepoint(pos):
+                clicked_tile = i
+                break
+
+        if clicked_tile is not None:
+            if (
+                self.selected_tile_idx is not None
+                and self.selected_tile_idx != clicked_tile
+            ):
+                idx1 = self.selected_tile_idx
+                idx2 = clicked_tile
+                self.tile_letters[idx1], self.tile_letters[idx2] = (
+                    self.tile_letters[idx2],
+                    self.tile_letters[idx1],
+                )
+                self.selected_tile_idx = None
+            else:
+                self.dragging_tile_idx = clicked_tile
+                rect = self.get_tile_rect(clicked_tile, total_tiles)
+                self.drag_mouse_offset = (
+                    pos[0] - rect.x,
+                    pos[1] - rect.y,
+                )
+                self.drag_current_pos = pos
+                self.selected_tile_idx = clicked_tile
+
+    def _handle_mouse_up(self, pos):
+        """Process drop target on mouse button release during tile drag."""
+        if self.dragging_tile_idx is None:
+            return
+
+        total_tiles = len(self.tile_letters)
+        target_idx = None
+        for i in range(total_tiles):
+            rect = self.get_tile_rect(i, total_tiles)
+            if rect.collidepoint(pos):
+                target_idx = i
+                break
+
+        if (
+            target_idx is not None
+            and target_idx != self.dragging_tile_idx
+        ):
+            moved_letter = self.tile_letters.pop(self.dragging_tile_idx)
+            self.tile_letters.insert(target_idx, moved_letter)
+            self.selected_tile_idx = None
+        self.dragging_tile_idx = None
+
     def handle_event(self, event):
+        """Process keyboard keystrokes and mouse interaction events."""
         self.input_box.handle_event(event)
 
-        # Keyboard shortcuts
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
                 self.submit_guess()
-
-        # Mouse clicks and drag-and-drop for tiles & buttons
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            # Check submit button
-            if self.submit_btn.collidepoint(event.pos):
-                self.submit_guess()
-                return
-
-            # Check hint button (Task 2)
-            if self.hint_btn.collidepoint(event.pos):
-                self.trigger_hint()
-                return
-
-            # Check tile clicks / drag initiation (Task 4)
-            if not self.times_up:
-                total_tiles = len(self.tile_letters)
-                clicked_tile = None
-                for i in range(total_tiles):
-                    rect = self.get_tile_rect(i, total_tiles)
-                    if rect.collidepoint(event.pos):
-                        clicked_tile = i
-                        break
-
-                if clicked_tile is not None:
-                    # If clicking another tile while one is selected -> swap
-                    if (
-                        self.selected_tile_idx is not None
-                        and self.selected_tile_idx != clicked_tile
-                    ):
-                        idx1 = self.selected_tile_idx
-                        idx2 = clicked_tile
-                        self.tile_letters[idx1], self.tile_letters[idx2] = (
-                            self.tile_letters[idx2],
-                            self.tile_letters[idx1],
-                        )
-                        self.selected_tile_idx = None
-                    else:
-                        # Start dragging or toggle selection
-                        self.dragging_tile_idx = clicked_tile
-                        rect = self.get_tile_rect(clicked_tile, total_tiles)
-                        self.drag_mouse_offset = (
-                            event.pos[0] - rect.x,
-                            event.pos[1] - rect.y,
-                        )
-                        self.drag_current_pos = event.pos
-                        self.selected_tile_idx = clicked_tile
-
+            self._handle_mouse_down(event.pos)
         elif event.type == pygame.MOUSEMOTION:
             if self.dragging_tile_idx is not None:
                 self.drag_current_pos = event.pos
-
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            if self.dragging_tile_idx is not None:
-                total_tiles = len(self.tile_letters)
-                # Check where it was dropped
-                target_idx = None
-                for i in range(total_tiles):
-                    rect = self.get_tile_rect(i, total_tiles)
-                    if rect.collidepoint(event.pos):
-                        target_idx = i
-                        break
-
-                if (
-                    target_idx is not None
-                    and target_idx != self.dragging_tile_idx
-                ):
-                    # Move tile to target position
-                    moved_letter = self.tile_letters.pop(
-                        self.dragging_tile_idx
-                    )
-                    self.tile_letters.insert(target_idx, moved_letter)
-                    self.selected_tile_idx = None
-                self.dragging_tile_idx = None
+            self._handle_mouse_up(event.pos)
 
     def update(self):
-        # Task 3: Countdown Timer update logic
+        """Update active round countdown timer and trigger round transitions.
+        """
         if self.times_up:
-            # Pause 2s to let player read reveal before next round
             if pygame.time.get_ticks() - self.times_up_timer >= 2000:
                 self.next_round()
             return
@@ -237,10 +249,8 @@ class GameEngine:
             )
             self.feedback_color = (240, 80, 80)
 
-    def render(self, screen):
-        screen.fill((26, 30, 38))
-
-        # Title
+    def _render_header(self, screen):
+        """Render top title banner and current player score."""
         title_surf = self.font_title.render(
             "Word Scramble Arena", True, (245, 245, 245)
         )
@@ -248,7 +258,6 @@ class GameEngine:
             title_surf, (self.width // 2 - title_surf.get_width() // 2, 18)
         )
 
-        # Score
         score_surf = self.font_msg.render(
             f"Score: {self.score}", True, (255, 220, 80)
         )
@@ -256,14 +265,14 @@ class GameEngine:
             score_surf, (self.width // 2 - score_surf.get_width() // 2, 58)
         )
 
-        # Task 3: Countdown Timer Bar
+    def _render_timer_bar(self, screen):
+        """Render dynamic round countdown progress bar."""
         bar_w, bar_h = 240, 10
         bar_x = self.width // 2 - bar_w // 2
         bar_y = 88
         timer_ratio = self.time_left / self.round_duration
         current_fill_w = int(bar_w * timer_ratio)
 
-        # Bar color changes green -> yellow -> red
         if timer_ratio > 0.5:
             bar_color = (80, 210, 110)
         elif timer_ratio > 0.25:
@@ -286,22 +295,20 @@ class GameEngine:
         )
         screen.blit(timer_txt, (bar_x + bar_w + 10, bar_y - 2))
 
-        # Task 4: Interactive Letter Tiles Rack
+    def _render_tiles(self, screen):
+        """Render anagram tile rack, tile states, and dragged tile overlay."""
         total_tiles = len(self.tile_letters)
         for i, letter in enumerate(self.tile_letters):
             slot_rect = self.get_tile_rect(i, total_tiles)
-            # Slot placeholder background
             pygame.draw.rect(screen, (38, 44, 56), slot_rect, border_radius=8)
             pygame.draw.rect(
                 screen, (60, 70, 90), slot_rect, width=1, border_radius=8
             )
 
-            # Skip drawing normal tile if being dragged
             if self.dragging_tile_idx == i:
                 continue
 
-            # Highlight selected tile
-            is_selected = (self.selected_tile_idx == i)
+            is_selected = self.selected_tile_idx == i
             tile_bg = (55, 75, 110) if is_selected else (45, 55, 72)
             tile_border = (100, 200, 255) if is_selected else (110, 130, 160)
             border_w = 3 if is_selected else 2
@@ -320,43 +327,8 @@ class GameEngine:
                 ),
             )
 
-        # Draw dragged tile on top
-        if (
-            self.dragging_tile_idx is not None
-            and self.dragging_tile_idx < len(self.tile_letters)
-        ):
-            drag_x = self.drag_current_pos[0] - self.drag_mouse_offset[0]
-            drag_y = self.drag_current_pos[1] - self.drag_mouse_offset[1]
-            drag_rect = pygame.Rect(
-                drag_x, drag_y, self.tile_size, self.tile_size
-            )
+        self._draw_dragged_tile(screen)
 
-            # Shadow
-            shadow_rect = pygame.Rect(
-                drag_x + 3, drag_y + 4, self.tile_size, self.tile_size
-            )
-            pygame.draw.rect(
-                screen, (15, 18, 24), shadow_rect, border_radius=8
-            )
-
-            pygame.draw.rect(
-                screen, (70, 95, 145), drag_rect, border_radius=8
-            )
-            pygame.draw.rect(
-                screen, (130, 220, 255), drag_rect, width=3, border_radius=8
-            )
-
-            letter = self.tile_letters[self.dragging_tile_idx]
-            letter_surf = self.font_word.render(letter, True, (255, 255, 255))
-            screen.blit(
-                letter_surf,
-                (
-                    drag_rect.centerx - letter_surf.get_width() // 2,
-                    drag_rect.centery - letter_surf.get_height() // 2,
-                ),
-            )
-
-        # Instruction subtitle
         sub_text = self.font_small.render(
             "Drag or click tiles to rearrange anagram", True, (140, 150, 170)
         )
@@ -364,23 +336,57 @@ class GameEngine:
             sub_text, (self.width // 2 - sub_text.get_width() // 2, 182)
         )
 
-        # Task 2: Hint Revealed Letters Display
-        hint_chars = []
-        for idx, char in enumerate(self.secret_word):
-            if idx < self.revealed_hints:
-                hint_chars.append(char)
-            else:
-                hint_chars.append("_")
+    def _draw_dragged_tile(self, screen):
+        """Draw active dragged tile overlay with shadow and highlight border.
+        """
+        if (
+            self.dragging_tile_idx is None
+            or self.dragging_tile_idx >= len(self.tile_letters)
+        ):
+            return
+
+        drag_x = self.drag_current_pos[0] - self.drag_mouse_offset[0]
+        drag_y = self.drag_current_pos[1] - self.drag_mouse_offset[1]
+        drag_rect = pygame.Rect(
+            drag_x, drag_y, self.tile_size, self.tile_size
+        )
+        shadow_rect = pygame.Rect(
+            drag_x + 3, drag_y + 4, self.tile_size, self.tile_size
+        )
+        pygame.draw.rect(
+            screen, (15, 18, 24), shadow_rect, border_radius=8
+        )
+        pygame.draw.rect(
+            screen, (70, 95, 145), drag_rect, border_radius=8
+        )
+        pygame.draw.rect(
+            screen, (130, 220, 255), drag_rect, width=3, border_radius=8
+        )
+
+        letter = self.tile_letters[self.dragging_tile_idx]
+        letter_surf = self.font_word.render(letter, True, (255, 255, 255))
+        screen.blit(
+            letter_surf,
+            (
+                drag_rect.centerx - letter_surf.get_width() // 2,
+                drag_rect.centery - letter_surf.get_height() // 2,
+            ),
+        )
+
+    def _render_controls(self, screen):
+        """Render hint letters, text input box, buttons, and feedback text."""
+        hint_chars = [
+            char if idx < self.revealed_hints else "_"
+            for idx, char in enumerate(self.secret_word)
+        ]
         hint_str = "  ".join(hint_chars)
         hint_surf = self.font_hint.render(hint_str, True, (255, 215, 100))
         screen.blit(
             hint_surf, (self.width // 2 - hint_surf.get_width() // 2, 215)
         )
 
-        # Text input box
         self.input_box.render(screen)
 
-        # Submit Button
         pygame.draw.rect(
             screen, (40, 145, 75), self.submit_btn, border_radius=6
         )
@@ -396,7 +402,6 @@ class GameEngine:
             ),
         )
 
-        # Task 2: Hint Button
         pygame.draw.rect(
             screen, (185, 125, 25), self.hint_btn, border_radius=6
         )
@@ -412,7 +417,6 @@ class GameEngine:
             ),
         )
 
-        # Feedback Message
         feedback_surf = self.font_msg.render(
             self.feedback_msg, True, self.feedback_color
         )
@@ -420,3 +424,11 @@ class GameEngine:
             feedback_surf,
             (self.width // 2 - feedback_surf.get_width() // 2, 335),
         )
+
+    def render(self, screen):
+        """Render complete UI scene including rack, controls, and feedback."""
+        screen.fill((26, 30, 38))
+        self._render_header(screen)
+        self._render_timer_bar(screen)
+        self._render_tiles(screen)
+        self._render_controls(screen)

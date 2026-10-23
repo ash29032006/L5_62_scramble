@@ -1,3 +1,6 @@
+"""Main application entry point for Word Scramble Arena."""
+
+# pylint: disable=no-member
 import pygame
 from game.game_engine import GameEngine
 
@@ -6,6 +9,7 @@ FPS = 60
 
 
 def main():
+    """Initialize Pygame and run the primary game loop."""
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Word Scramble Arena")
