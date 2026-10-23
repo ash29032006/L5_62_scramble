@@ -8,7 +8,10 @@ class GameEngine:
         self.width = width
         self.height = height
 
-        self.words = ["PYTHON", "PYGAME", "PLANET", "ROCKET", "GALAXY", "STREAM", "PUZZLE", "ALGORITHM"]
+        self.words = [
+            "PYTHON", "PYGAME", "PLANET", "ROCKET",
+            "GALAXY", "STREAM", "PUZZLE", "ALGORITHM"
+        ]
         self.target_word = ""
         self.scrambled_word = ""
 
@@ -70,10 +73,14 @@ class GameEngine:
                 return shuffled
 
     def get_tile_rect(self, index, total_tiles):
-        total_w = total_tiles * self.tile_size + (total_tiles - 1) * self.tile_gap
+        total_w = (
+            total_tiles * self.tile_size + (total_tiles - 1) * self.tile_gap
+        )
         start_x = (self.width - total_w) // 2
         tile_x = start_x + index * (self.tile_size + self.tile_gap)
-        return pygame.Rect(tile_x, self.tile_rack_y, self.tile_size, self.tile_size)
+        return pygame.Rect(
+            tile_x, self.tile_rack_y, self.tile_size, self.tile_size
+        )
 
     def next_round(self):
         self.target_word = secrets.choice(self.words)
@@ -101,7 +108,7 @@ class GameEngine:
         if self.revealed_hints < len(self.secret_word):
             self.revealed_hints += 1
             self.score = max(0, self.score - 1)
-            self.feedback_msg = f"Hint revealed! (-1 point penalty)"
+            self.feedback_msg = "Hint revealed! (-1 point penalty)"
             self.feedback_color = (255, 200, 80)
         else:
             self.feedback_msg = "All letters already revealed!"
@@ -161,18 +168,26 @@ class GameEngine:
                         break
 
                 if clicked_tile is not None:
-                    # If clicking another tile while one is selected -> swap immediately
-                    if self.selected_tile_idx is not None and self.selected_tile_idx != clicked_tile:
-                        self.tile_letters[self.selected_tile_idx], self.tile_letters[clicked_tile] = (
-                            self.tile_letters[clicked_tile],
-                            self.tile_letters[self.selected_tile_idx],
+                    # If clicking another tile while one is selected -> swap
+                    if (
+                        self.selected_tile_idx is not None
+                        and self.selected_tile_idx != clicked_tile
+                    ):
+                        idx1 = self.selected_tile_idx
+                        idx2 = clicked_tile
+                        self.tile_letters[idx1], self.tile_letters[idx2] = (
+                            self.tile_letters[idx2],
+                            self.tile_letters[idx1],
                         )
                         self.selected_tile_idx = None
                     else:
                         # Start dragging or toggle selection
                         self.dragging_tile_idx = clicked_tile
                         rect = self.get_tile_rect(clicked_tile, total_tiles)
-                        self.drag_mouse_offset = (event.pos[0] - rect.x, event.pos[1] - rect.y)
+                        self.drag_mouse_offset = (
+                            event.pos[0] - rect.x,
+                            event.pos[1] - rect.y,
+                        )
                         self.drag_current_pos = event.pos
                         self.selected_tile_idx = clicked_tile
 
@@ -191,9 +206,14 @@ class GameEngine:
                         target_idx = i
                         break
 
-                if target_idx is not None and target_idx != self.dragging_tile_idx:
+                if (
+                    target_idx is not None
+                    and target_idx != self.dragging_tile_idx
+                ):
                     # Move tile to target position
-                    moved_letter = self.tile_letters.pop(self.dragging_tile_idx)
+                    moved_letter = self.tile_letters.pop(
+                        self.dragging_tile_idx
+                    )
                     self.tile_letters.insert(target_idx, moved_letter)
                     self.selected_tile_idx = None
                 self.dragging_tile_idx = None
@@ -201,7 +221,7 @@ class GameEngine:
     def update(self):
         # Task 3: Countdown Timer update logic
         if self.times_up:
-            # Pause 2 seconds to let the player read the revelation before moving to next round
+            # Pause 2s to let player read reveal before next round
             if pygame.time.get_ticks() - self.times_up_timer >= 2000:
                 self.next_round()
             return
@@ -212,19 +232,29 @@ class GameEngine:
         if self.time_left <= 0:
             self.times_up = True
             self.times_up_timer = pygame.time.get_ticks()
-            self.feedback_msg = f"TIME'S UP! The word was '{self.secret_word}'."
+            self.feedback_msg = (
+                f"TIME'S UP! The word was '{self.secret_word}'."
+            )
             self.feedback_color = (240, 80, 80)
 
     def render(self, screen):
         screen.fill((26, 30, 38))
 
         # Title
-        title_surf = self.font_title.render("Word Scramble Arena", True, (245, 245, 245))
-        screen.blit(title_surf, (self.width // 2 - title_surf.get_width() // 2, 18))
+        title_surf = self.font_title.render(
+            "Word Scramble Arena", True, (245, 245, 245)
+        )
+        screen.blit(
+            title_surf, (self.width // 2 - title_surf.get_width() // 2, 18)
+        )
 
         # Score
-        score_surf = self.font_msg.render(f"Score: {self.score}", True, (255, 220, 80))
-        screen.blit(score_surf, (self.width // 2 - score_surf.get_width() // 2, 58))
+        score_surf = self.font_msg.render(
+            f"Score: {self.score}", True, (255, 220, 80)
+        )
+        screen.blit(
+            score_surf, (self.width // 2 - score_surf.get_width() // 2, 58)
+        )
 
         # Task 3: Countdown Timer Bar
         bar_w, bar_h = 240, 10
@@ -241,11 +271,19 @@ class GameEngine:
         else:
             bar_color = (240, 70, 70)
 
-        pygame.draw.rect(screen, (55, 60, 75), (bar_x, bar_y, bar_w, bar_h), border_radius=5)
+        pygame.draw.rect(
+            screen, (55, 60, 75), (bar_x, bar_y, bar_w, bar_h),
+            border_radius=5
+        )
         if current_fill_w > 0:
-            pygame.draw.rect(screen, bar_color, (bar_x, bar_y, current_fill_w, bar_h), border_radius=5)
+            pygame.draw.rect(
+                screen, bar_color, (bar_x, bar_y, current_fill_w, bar_h),
+                border_radius=5
+            )
 
-        timer_txt = self.font_timer.render(f"{int(self.time_left)}s", True, bar_color)
+        timer_txt = self.font_timer.render(
+            f"{int(self.time_left)}s", True, bar_color
+        )
         screen.blit(timer_txt, (bar_x + bar_w + 10, bar_y - 2))
 
         # Task 4: Interactive Letter Tiles Rack
@@ -254,9 +292,11 @@ class GameEngine:
             slot_rect = self.get_tile_rect(i, total_tiles)
             # Slot placeholder background
             pygame.draw.rect(screen, (38, 44, 56), slot_rect, border_radius=8)
-            pygame.draw.rect(screen, (60, 70, 90), slot_rect, width=1, border_radius=8)
+            pygame.draw.rect(
+                screen, (60, 70, 90), slot_rect, width=1, border_radius=8
+            )
 
-            # Skip drawing normal tile if it's currently being dragged (drawn on top later)
+            # Skip drawing normal tile if being dragged
             if self.dragging_tile_idx == i:
                 continue
 
@@ -267,37 +307,62 @@ class GameEngine:
             border_w = 3 if is_selected else 2
 
             pygame.draw.rect(screen, tile_bg, slot_rect, border_radius=8)
-            pygame.draw.rect(screen, tile_border, slot_rect, width=border_w, border_radius=8)
+            pygame.draw.rect(
+                screen, tile_border, slot_rect, width=border_w, border_radius=8
+            )
 
             letter_surf = self.font_word.render(letter, True, (240, 245, 255))
             screen.blit(
                 letter_surf,
-                (slot_rect.centerx - letter_surf.get_width() // 2, slot_rect.centery - letter_surf.get_height() // 2),
+                (
+                    slot_rect.centerx - letter_surf.get_width() // 2,
+                    slot_rect.centery - letter_surf.get_height() // 2,
+                ),
             )
 
         # Draw dragged tile on top
-        if self.dragging_tile_idx is not None and self.dragging_tile_idx < len(self.tile_letters):
+        if (
+            self.dragging_tile_idx is not None
+            and self.dragging_tile_idx < len(self.tile_letters)
+        ):
             drag_x = self.drag_current_pos[0] - self.drag_mouse_offset[0]
             drag_y = self.drag_current_pos[1] - self.drag_mouse_offset[1]
-            drag_rect = pygame.Rect(drag_x, drag_y, self.tile_size, self.tile_size)
+            drag_rect = pygame.Rect(
+                drag_x, drag_y, self.tile_size, self.tile_size
+            )
 
             # Shadow
-            shadow_rect = pygame.Rect(drag_x + 3, drag_y + 4, self.tile_size, self.tile_size)
-            pygame.draw.rect(screen, (15, 18, 24), shadow_rect, border_radius=8)
+            shadow_rect = pygame.Rect(
+                drag_x + 3, drag_y + 4, self.tile_size, self.tile_size
+            )
+            pygame.draw.rect(
+                screen, (15, 18, 24), shadow_rect, border_radius=8
+            )
 
-            pygame.draw.rect(screen, (70, 95, 145), drag_rect, border_radius=8)
-            pygame.draw.rect(screen, (130, 220, 255), drag_rect, width=3, border_radius=8)
+            pygame.draw.rect(
+                screen, (70, 95, 145), drag_rect, border_radius=8
+            )
+            pygame.draw.rect(
+                screen, (130, 220, 255), drag_rect, width=3, border_radius=8
+            )
 
             letter = self.tile_letters[self.dragging_tile_idx]
             letter_surf = self.font_word.render(letter, True, (255, 255, 255))
             screen.blit(
                 letter_surf,
-                (drag_rect.centerx - letter_surf.get_width() // 2, drag_rect.centery - letter_surf.get_height() // 2),
+                (
+                    drag_rect.centerx - letter_surf.get_width() // 2,
+                    drag_rect.centery - letter_surf.get_height() // 2,
+                ),
             )
 
         # Instruction subtitle
-        sub_text = self.font_small.render("Drag or click tiles to rearrange anagram", True, (140, 150, 170))
-        screen.blit(sub_text, (self.width // 2 - sub_text.get_width() // 2, 182))
+        sub_text = self.font_small.render(
+            "Drag or click tiles to rearrange anagram", True, (140, 150, 170)
+        )
+        screen.blit(
+            sub_text, (self.width // 2 - sub_text.get_width() // 2, 182)
+        )
 
         # Task 2: Hint Revealed Letters Display
         hint_chars = []
@@ -308,14 +373,20 @@ class GameEngine:
                 hint_chars.append("_")
         hint_str = "  ".join(hint_chars)
         hint_surf = self.font_hint.render(hint_str, True, (255, 215, 100))
-        screen.blit(hint_surf, (self.width // 2 - hint_surf.get_width() // 2, 215))
+        screen.blit(
+            hint_surf, (self.width // 2 - hint_surf.get_width() // 2, 215)
+        )
 
         # Text input box
         self.input_box.render(screen)
 
         # Submit Button
-        pygame.draw.rect(screen, (40, 145, 75), self.submit_btn, border_radius=6)
-        pygame.draw.rect(screen, (180, 230, 195), self.submit_btn, width=2, border_radius=6)
+        pygame.draw.rect(
+            screen, (40, 145, 75), self.submit_btn, border_radius=6
+        )
+        pygame.draw.rect(
+            screen, (180, 230, 195), self.submit_btn, width=2, border_radius=6
+        )
         submit_text = self.font_btn.render("SUBMIT", True, (255, 255, 255))
         screen.blit(
             submit_text,
@@ -326,8 +397,12 @@ class GameEngine:
         )
 
         # Task 2: Hint Button
-        pygame.draw.rect(screen, (185, 125, 25), self.hint_btn, border_radius=6)
-        pygame.draw.rect(screen, (245, 210, 140), self.hint_btn, width=2, border_radius=6)
+        pygame.draw.rect(
+            screen, (185, 125, 25), self.hint_btn, border_radius=6
+        )
+        pygame.draw.rect(
+            screen, (245, 210, 140), self.hint_btn, width=2, border_radius=6
+        )
         hint_text = self.font_btn.render("HINT", True, (255, 255, 255))
         screen.blit(
             hint_text,
@@ -338,5 +413,10 @@ class GameEngine:
         )
 
         # Feedback Message
-        feedback_surf = self.font_msg.render(self.feedback_msg, True, self.feedback_color)
-        screen.blit(feedback_surf, (self.width // 2 - feedback_surf.get_width() // 2, 335))
+        feedback_surf = self.font_msg.render(
+            self.feedback_msg, True, self.feedback_color
+        )
+        screen.blit(
+            feedback_surf,
+            (self.width // 2 - feedback_surf.get_width() // 2, 335),
+        )
